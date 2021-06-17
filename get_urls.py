@@ -44,14 +44,28 @@ def scrape_song_urls(n = 'all', threads = 1, verbose=True):
 
         job.get_url()
         sleep(1)
-
         job.driver.find_element_by_xpath('//*[@id="format"]/optgroup[1]/option[8]').click()
         job.driver.find_element_by_xpath('//*[@id="link"]').send_keys(track_url)
         job.driver.find_element_by_xpath('//*[@id="load"]').click()
-        sleep(30)
-        button = job.driver.find_element_by_id('ds')
-        ele = button.find_elements_by_tag_name('a')
-        dl_url = ele[2].get_attribute('href')
+
+        # Wait for Download box to generate
+        wait = WebDriverWait(job.driver, 50)
+        wait.until(presence_of_element_located((By.XPATH,'//div[contains(@class, "download-card")]')))
+        element_with_string = job.driver.find_element_by_xpath('//div[contains(@class, "download-card")]')
+
+        # Get element Id string from Download box id
+        string = element_with_string.get_attribute('id').split('-')[1]
+        downloadbutton_id = f"{string}_downloadLink"
+        downloadbutton_xpath = f"//*[@id='{downloadbutton_id}']"
+
+        # Get Download URL using xpath generated previously
+        wait.until(presence_of_element_located((By.XPATH, downloadbutton_xpath)))
+
+        dl_url = 'https://loader.to/en3/soundcloud-downloader.html#'
+
+        while dl_url == 'https://loader.to/en3/soundcloud-downloader.html#':
+
+            dl_url = job.driver.find_element_by_xpath(downloadbutton_xpath).get_attribute('href')
 
         print(dl_url)
         extra_data = {track_name: dl_url}
