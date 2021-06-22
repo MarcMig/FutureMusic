@@ -29,8 +29,12 @@ def s3_save_track(
 
     ## getting .wav data, storing it into handle file object
     # with open(file_name, 'wb+') as handle:
-    response = requests.get(track_url, stream=True)
+    # response = requests.get(track_url, stream=True)
+    session = requests.Session()
+    response = session.get(track_url, stream=True)  # headers=headers,
+    response.raise_for_status()
     print(response, response.status_code)
+
     if response.status_code == 200:
 
         # raw_data = response.content
@@ -47,7 +51,7 @@ def s3_save_track(
             s3_url,
             "wb",
             transport_params={
-                # "client": client,
+                "client": client,
                 "multipart_upload": True,
                 "client_kwargs": {
                     "S3.Client.create_multipart_upload": {
@@ -65,7 +69,7 @@ def s3_save_track(
             },
         ) as new_file:
 
-            for chunk in tqdm(response.iter_content(chunk_size=2048 * 2048 * 1024)):
+            for chunk in tqdm(response.iter_content(chunk_size=1024 * 1024)):
                 # writing one chunk at a time to wav file
                 if chunk:
                     new_file.write(chunk)
@@ -89,15 +93,15 @@ def s3_save_track(
             #     #
             # )
             # data.close()
-            new_file.close()
+            # new_file.close()
 
         # Format the return URL of upload file in S3 Bucket
-        file_url = "https://%s.%s/%s" % (bucket, endpoint, file_key)
+        # file_url = "https://%s.%s/%s" % (bucket, endpoint, file_key)
 
-        if verbose:
-            print("Attachment Successfully save in S3 Bucket, url: %s " % (file_url))
+        # if verbose:
+        #     print("Attachment Successfully saved in S3 Bucket, url: %s " % (file_url))
 
-        return file_url
+        # return file_url
 
         # except Exception as e:
         #     print("Error in file upload %s." % (str(e)))
@@ -113,11 +117,11 @@ def s3_save_track(
 
 def downloader(n="all", verbose=True):
 
-    ## setting up AWS S3 client
-    s3_client = boto3.client(
-        "s3", aws_access_key_id=access_key_ID, aws_secret_access_key=secret_access_ID
+    session = boto3.Session(
+        aws_access_key_id=access_key_ID, aws_secret_access_key=secret_access_ID
     )
-    # add session
+    ## setting up AWS S3 client
+    s3_client = session.client("s3")
 
     s3_endpoint = "s3.eu-west-3.amazonaws.com"
 
