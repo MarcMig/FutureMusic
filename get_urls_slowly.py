@@ -7,10 +7,10 @@ from selenium.webdriver.support.expected_conditions import presence_of_element_l
 from selenium.webdriver.support.expected_conditions import element_to_be_clickable
 
 
-def scrape_song_urls(n="all", verbose=True):
+def scrape_song_urls(n="all", verbose=True, csv_name):
 
     # Get list song Urls from DataFrame
-    song_urls = pd.read_csv("tracks_and_beats.csv", usecols=["track_name", "track_url"])
+    song_urls = pd.read_csv(csv_name, usecols=["track_name", "track_id", "track_url", "artist_name", "artist_id"])
     song_urls_df = pd.DataFrame()
     options = webdriver.ChromeOptions()
     options.add_argument("--ignore-certificate-error")
@@ -28,8 +28,10 @@ def scrape_song_urls(n="all", verbose=True):
 
         # Go to webpage, find elements
         track_name = song_urls["track_name"][i]
+        track_id = song_urls["track_id"][i]
         track_url = song_urls["track_url"][i]
-        print(track_name, track_url)
+        artist_name = song_urls["artist_name"][i]
+        artist_id = song_urls["artist_id"][i]
 
         driver.get(url)
         sleep(1)
@@ -39,7 +41,7 @@ def scrape_song_urls(n="all", verbose=True):
         driver.find_element_by_xpath('//*[@id="load"]').click()
 
         try:
-            wait = WebDriverWait(driver, 100)
+            wait = WebDriverWait(driver, 200)
             wait.until(
                 presence_of_element_located(
                     (By.XPATH, '//div[contains(@class, "download-card")]')
@@ -63,7 +65,9 @@ def scrape_song_urls(n="all", verbose=True):
                 "href"
             )
 
-            extra_data = {"Track_name": track_name, "download_url": dl_url}
+            extra_data = {"track_name": track_name, "track_id": track_id,
+            "download_url": dl_url, "artist_name": artist_name, "artist_id": artist_id
+            }
 
             print(extra_data)
 
@@ -81,4 +85,4 @@ def scrape_song_urls(n="all", verbose=True):
 
 if __name__ == "__main__":
 
-    scrape_song_urls(n=10)
+    scrape_song_urls(verbose=False, csv_name="only_tracks.csv")
