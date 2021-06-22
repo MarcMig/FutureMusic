@@ -5,10 +5,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver.support.expected_conditions import element_to_be_clickable
+from concurrent.futures import ThreadPoolExecutor, wait
 
 class FutureScraper():
 
-    def __init__(self, n, csv_name, headless=True):
+    def __init__(self, n, csv_name, headless=True, threads=1):
         self.n = n
         self.song_urls_df = pd.read_csv(csv_name,
         usecols=["track_name", "track_id", "track_url", "artist_name", "artist_id"]
@@ -16,6 +17,7 @@ class FutureScraper():
         self.dl_urls_df = pd.DataFrame()
         self.url = "https://loader.to/en3/soundcloud-downloader.html"
         self.headless = headless
+        self.threads = threads
 
     def connect_to_base(self, browser, url):
         connection_attemps = 0
@@ -35,7 +37,7 @@ class FutureScraper():
 
     def write_to_file(self, dl_url, i):
 
-            track_name = self.song_urls["track_name"][i]
+            track_name = self.song_urls_df["track_name"][i]
             track_id = self.song_urls_df["track_id"][i]
             artist_name = self.song_urls_df["artist_name"][i]
             artist_id = self.song_urls_df["artist_id"][i]
@@ -45,9 +47,11 @@ class FutureScraper():
                 }
             
             self.dl_urls_df = self.dl_urls_df.append(extra_data, ignore_index=True)
-            self.dl_urls_df.to_csv(f"track_urls_{n}.csv")
+            self.dl_urls_df.to_csv(f"track_urls_{self.n}.csv")
 
-    def run_process(self, browser, i):
+    def run_process(self, i):
+
+        browser = self.get_driver()
 
         if self.connect_to_base(browser, self.url):
             sleep(1)
@@ -80,9 +84,10 @@ class FutureScraper():
                     "href"
                 )
                 self.write_to_file(dl_url, i)
+                browser.quit()
             except TimeoutError:
                 print("Wait period lapsed")
-                continue
+                browser.quit()
              
     def get_driver(self):
 
@@ -100,12 +105,17 @@ class FutureScraper():
         if self.n != 'all':
             self.song_urls_df = self.song_urls_df.iloc[:self.n,]
 
-        browser = get_driver()
+        self.futures = []
 
-        for i in range(len(self.song_urls_df)):
-            self.run_process(browser, i)
+        with ThreadPoolExecutor(max_workers=self.threads) as executor:
+            for i in range(len(self.song_urls_df)):
+                self.futures.append(
+                    executor.submit(self.run_process, i)
+                )
+        wait(self.futures)
+
 
 if __name__=="__main__":
-    scraper = FutureScraper(2,"only_tracks.csv", False)
+    scraper = FutureScraper(10,"only_tracks.csv", True, threads=3)
     scraper.scrape_em()
         
