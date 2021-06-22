@@ -8,6 +8,7 @@ import pandas as pd
 from boto3 import resource
 from smart_open import open
 from boto3.s3.transfer import TransferConfig
+from tqdm import tqdm
 
 
 # to later update metadata with e.g. comments: https://stackoverflow.com/questions/4754383/how-to-change-metadata-on-an-object-in-amazon-s3#4754439
@@ -32,15 +33,14 @@ def s3_save_track(
     print(response, response.status_code)
     if response.status_code == 200:
 
-        raw_data = response.content
-        url_parser = urlparse(
-            track_url
-        )  # try something else than urlparse? download locally?
-        file_name_server = os.path.basename(url_parser.path)
+        # raw_data = response.content
+        # url_parser = urlparse(track_url)
+        # file_name_server = os.path.basename(url_parser.path)
         file_name = f"{int(track_id)}.wav"
         file_key = folder + "/" + file_name
         s3_url = "s3://" + bucket + "/" + file_key
-        # client.create_multipart_upload(Bucket=bucket, Key=file_key)
+        client.create_multipart_upload(Bucket=bucket, Key=file_key)
+
         # try:
         # Write the raw data as bytes in new file_name in the server
         with open(
@@ -48,24 +48,24 @@ def s3_save_track(
             "wb",
             transport_params={
                 # "client": client,
-                "multipart_upload": False
-                # "client_kwargs": {
-                #     "S3.Client.create_multipart_upload": {
-                #         "Bucket": bucket,
-                #         "Key": file_key,
-                #         "Metadata": {
-                #             "artist_name": artist_name,
-                #             "track_name": track_name,
-                #             "artist_id": str(artist_id),
-                #             "track_id": str(track_id)
-                #             #
-                #         },
-                #     }
-                # },
+                "multipart_upload": True,
+                "client_kwargs": {
+                    "S3.Client.create_multipart_upload": {
+                        "Bucket": bucket,
+                        "Key": file_key,
+                        "Metadata": {
+                            "artist_name": artist_name,
+                            "track_name": track_name,
+                            "artist_id": str(int(artist_id)),
+                            "track_id": str(track_id)
+                            #
+                        },
+                    }
+                },
             },
         ) as new_file:
 
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
+            for chunk in tqdm(response.iter_content(chunk_size=2048 * 2048 * 1024)):
                 # writing one chunk at a time to wav file
                 if chunk:
                     new_file.write(chunk)
@@ -117,6 +117,7 @@ def downloader(n="all", verbose=True):
     s3_client = boto3.client(
         "s3", aws_access_key_id=access_key_ID, aws_secret_access_key=secret_access_ID
     )
+    # add session
 
     s3_endpoint = "s3.eu-west-3.amazonaws.com"
 
@@ -153,4 +154,4 @@ def downloader(n="all", verbose=True):
 
 # HOW TO MAKE IT LAMBDA?
 if __name__ == "__main__":
-    downloader(n=1)
+    downloader()
