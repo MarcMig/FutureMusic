@@ -133,3 +133,6 @@ dmypy.json
 
 # Chromedriver
 chromedriver.exe
+
+# AWS Creds
+secret_credentials.py
