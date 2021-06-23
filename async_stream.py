@@ -2,6 +2,7 @@ import asyncio
 import logging
 import boto3
 from botocore.exceptions import ClientError
+from botocore.vendored.six import BytesIO
 import requests
 import urllib.parse
 from secret_credentials import access_key_ID, secret_access_ID
@@ -26,32 +27,37 @@ async def multipart_stream(
     file_name = f"{int(track_id)}.wav"
     file_key = folder + "/" + file_name
     s3 = client
-    with requests.session() as session:
-        response = session.post(track_url, data=payload, stream=True)
-        print(response)
 
-        with response as part:
-            part.raw.decode_content = True
-            conf = boto3.s3.transfer.TransferConfig(
-                multipart_threshold=10000, max_concurrency=100
-            )
-            s3.upload_fileobj(
-                part.raw,
-                bucket,
-                file_key,
-                Config=conf,
-                ExtraArgs={
-                    "Metadata": {
-                        "artist_name": artist_name,
-                        "track_name": track_name,
-                        "artist_id": str(int(artist_id)),
-                        "track_id": str(track_id)
-                        #
-                    }
-                },
-            )
-            # add metadata
-            print("Uploaded object")
+    async with aiohttp.ClientSession(auto_decompress=False) as session:
+        response = await session.post(
+            track_url, data=payload
+        )  # Use chunks. or need to use MemoryStream instead of StreamReader object for binary data
+        content = response.content
+        print(content)
+
+        # async with content as part:
+        # part.raw.decode_content = True
+        conf = boto3.s3.transfer.TransferConfig(
+            multipart_threshold=10000, max_concurrency=100
+        )
+
+        await s3.upload_fileobj(
+            content,
+            bucket,
+            file_key,
+            Config=conf,
+            ExtraArgs={
+                "Metadata": {
+                    "artist_name": artist_name,
+                    "track_name": track_name,
+                    "artist_id": str(int(artist_id)),
+                    "track_id": str(track_id)
+                    #
+                }
+            },
+        )
+        # add metadata
+        print("Uploaded object")
 
 
 # def create_presigned_post(
