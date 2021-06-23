@@ -1,5 +1,8 @@
 import pandas as pd
+import csv
 from time import sleep
+from time import time
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -9,8 +12,9 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 class FutureScraper():
 
-    def __init__(self, n, csv_name, headless=True, threads=1):
-        self.n = n
+    def __init__(self, csv_name, start=0, end='all',  headless=True, threads=1):
+        self.start = start
+        self.end = end
         self.song_urls_df = pd.read_csv(csv_name,
         usecols=["track_name", "track_id", "track_url", "artist_name", "artist_id"]
         )
@@ -35,21 +39,24 @@ class FutureScraper():
                 print(f'Attempt # {connection_attemps}')
         return False
 
-    def write_to_file(self, dl_url, i):
+    def write_to_file(self, dl_url, i, filename):
 
             track_name = self.song_urls_df["track_name"][i]
             track_id = self.song_urls_df["track_id"][i]
             artist_name = self.song_urls_df["artist_name"][i]
             artist_id = self.song_urls_df["artist_id"][i]
 
-            extra_data = {"track_name": track_name, "track_id": track_id,
+            data = {"id": i, "track_name": track_name, "track_id": track_id,
                 "download_url": dl_url, "artist_name": artist_name, "artist_id": artist_id
                 }
-            
-            self.dl_urls_df = self.dl_urls_df.append(extra_data, ignore_index=True)
-            self.dl_urls_df.to_csv(f"track_urls_{self.n}.csv")
+                        
+            with open(filename, "a") as csvfile:
+                fieldnames = ["id", "track_name", "track_id", "download_url", "artist_name", "artist_id"]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writerow(data)
 
-    def run_process(self, i):
+
+    def run_process(self, i, output_filename):
 
         browser = self.get_driver()
 
@@ -83,7 +90,7 @@ class FutureScraper():
                 dl_url = browser.find_element_by_xpath(downloadbutton_xpath).get_attribute(
                     "href"
                 )
-                self.write_to_file(dl_url, i)
+                self.write_to_file(dl_url, i, output_filename)
                 browser.quit()
             except TimeoutError:
                 print("Wait period lapsed")
@@ -102,20 +109,27 @@ class FutureScraper():
 
     def scrape_em(self):
     
-        if self.n != 'all':
-            self.song_urls_df = self.song_urls_df.iloc[:self.n,]
+        if self.end != 'all':
+            self.song_urls_df = self.song_urls_df.iloc[self.start:self.end,]
 
-        self.futures = []
+        tic = time()
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_filename = f"track_urls_{self.start}_to_{self.end}_{timestamp}.csv"
+        futures = []
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
             for i in range(len(self.song_urls_df)):
-                self.futures.append(
-                    executor.submit(self.run_process, i)
+                futures.append(
+                    executor.submit(self.run_process, i, output_filename)
                 )
-        wait(self.futures)
+        wait(futures)
+        toc = time()
+        tictoc = toc - tic
+        print(f"Elapsed run time: {tictoc} seconds")
+        
 
 
 if __name__=="__main__":
-    scraper = FutureScraper(10,"only_tracks.csv", True, threads=3)
+    scraper = FutureScraper(csv_name="missing_tracks.csv", headless=True, threads=1)
     scraper.scrape_em()
         
