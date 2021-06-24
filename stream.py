@@ -26,6 +26,7 @@ async def multipart_stream(
     file_name = f"{int(track_id)}.wav"
     file_key = folder + "/" + file_name
     s3 = client
+
     with requests.session() as session:
         response = session.post(track_url, data=payload, stream=True)
         print(response)
