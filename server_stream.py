@@ -43,11 +43,17 @@ class Streamer:
         self.file_key = folder + "/" + self.file_name
         self.bucket = bucket
         self.download_url = download_url
-        self.IP = "127.0.0.1"
-        self.port = 8888
-        self.next_IP = "52.95.156.0"  # use url.hostname instead?
-        self.next_port = 24
+        # self.IP = "127.0.0.1"
+        # self.port = 8888
+        # self.next_IP = "52.95.156.0"  # use url.hostname instead?
+        # self.next_port = 24
         self.client = client
+        self.presigned_response = create_presigned_post(
+            self.bucket, self.file_key, self.client
+        )
+        self.presigned_url = self.presigned_response["url"]
+        self.upload_hostname = urllib.parse.urlsplit(self.presigned_url).hostname
+        self.download_hostname = urllib.parse.urlsplit(self.download_url).hostname
 
     async def server_callback(self, reader, writer):
         # callback called whenever a client connection is established, receives reader and writer. is it just client_method()?
@@ -67,8 +73,12 @@ class Streamer:
         await writer.wait_closed()  # need?
 
     async def run(self):
-        self.next_reader, self.next_writer = await asyncio.open_connection(
-            self.next_IP, self.next_port
+        self.download_reader, self.download_writer = await asyncio.open_connection(
+            self.download_hostname
+        )
+
+        self.upload_reader, self.upload_writer = await asyncio.open_connection(
+            self.upload_hostname
         )
 
         # server part coroutine accepts the connection from download server
@@ -76,12 +86,13 @@ class Streamer:
 
         # client part coroutine opens a connection to presigned_url server
         client_coro = asyncio.create_task(self.client_method())
+
         await client_coro
         await server_coro
 
     async def server_init(self):
         server = await asyncio.start_server(
-            self.server_callback, self.IP, self.port
+            self.server_callback, self.download_hostname
         )  # use upload_url.hostname instead?
 
         addr = server.sockets[0].getsockname()
@@ -92,21 +103,15 @@ class Streamer:
 
     async def client_method(self):
         try:
-            data = await self.next_reader.read()
-            presigned_response = create_presigned_post(
-                self.bucket, self.file_key, self.client
-            )
-            upload_url = presigned_response["url"]
-            upload_url = urllib.parse.urlsplit(upload_url)
-            print(upload_url.hostname)
+            data = await self.next_reader.read()  # needs to read from old reader?
 
             files = {
                 "file": (self.file_key, data)
             }  # use put instead? response = requests.put(url, data=object_text)
             async with aiohttp.ClientSession(auto_decompress=False) as session:
                 http_response = await session.post(
-                    presigned_response["url"],
-                    data=presigned_response["fields"],
+                    self.presigned_response["url"],
+                    data=self.presigned_response["fields"],
                     files=files,
                 )  # data = response['fields']? or data=data?
 
@@ -154,7 +159,9 @@ async def main(n="all", start=0, verbose=True):
         ]
 
     await asyncio.gather(
-        *[stream(n, song_urls, s3_client) for n in range(len(song_urls))]
+        *[
+            stream(n, song_urls, s3_client) for n in range(len(song_urls))
+        ]  # limit number of workers?
     )
 
     if verbose:
@@ -163,5 +170,4 @@ async def main(n="all", start=0, verbose=True):
 
 if __name__ == "__main__":
     asyncio.run(main())
-    # asyncio.run(streamer(start=1))
-    # streamer()
+

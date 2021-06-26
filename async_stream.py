@@ -41,6 +41,10 @@ async def multipart_stream(
             multipart_threshold=10000, max_concurrency=100
         )
 
+        # body=stream. create stream, create request, start upload, create future, pipe request to stream. body=stream. superagent in nodeJS lambda. node install of superagent
+        # give permission in url when you create as lambda to s3 bucket - include superagent - create layer, node install...
+        # LocalStack to run locally. give urls in sets to each instance. with a json file. then click test. give cloudwatch permission. create policy for lambda fn. * for object name when adding ARN. cloudwatch logs -> create log stream, put log events, create log group - any in this account. create new role from aws policy template. give role a policy. then select role in runtime. change account number
+
         await s3.upload_fileobj(
             content,
             bucket,
