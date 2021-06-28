@@ -136,3 +136,4 @@ chromedriver.exe
 
 # AWS Creds
 secret_credentials.py
+config.json
