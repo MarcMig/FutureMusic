@@ -2,7 +2,8 @@
 // 2. for copying, add s3 bucket permissions to lambda: s3:putObject
 // 3. p
 
-
+const fs = require('fs');
+const path = require('path');
 const { PassThrough } = require('stream');
 const AWS = require('aws-sdk');
 const superagent = require('superagent');
@@ -10,8 +11,12 @@ const superagent = require('superagent');
 const BUCKET_NAME = 'sound-scraping';
 
 AWS.config.loadFromPath('./config.json');
+AWS.config.update({region: 'us-east-1'});
 
-const s3 = new AWS.S3();
+const s3 = new AWS.S3({
+  apiVersion: '2006-03-01',
+  signatureVersion: 'v4',
+});
 
 const putStreamToS3 = async (s3Service, { Bucket, Key, ContentType, Metadata, Body }) => {
   console.log(`[AWSUtils.putStreamToS3] Putting ${Key} as stream into ${Bucket}`);
@@ -26,18 +31,27 @@ const putStreamToS3 = async (s3Service, { Bucket, Key, ContentType, Metadata, Bo
     .promise();
 };
 
-const Lambda = async (event) => {
-  const { originUrls } = event;
+const Lambda = async (jsonFileName) => {
+  //const { originUrls } = event;
+  let trax = null;
 
-  const result = await Promise.all(originUrls.map((el) => {
-    const { id, name, url } = el;
+  try {
+    trax = JSON.parse(fs.readFileSync(jsonFileName));
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+
+  const result = await Promise.all(Object.keys(trax).map((key) => {
+    const el = trax[key];
+    const { track_id, download_url, artist_id, ...rest } = el;
     let upload = null;
     try {
       // these are the parameters
       const stream = new PassThrough();
-      const req = superagent.post(url).set({ 'User-Agent': 'Mozilla/5.0' })
+      const req = superagent.post(download_url).set({ 'User-Agent': 'Mozilla/5.0' })
                                       .send("");
-      const fileName = `track-files/${id}.wav`;
+      const fileName = `track-files/${track_id}.wav`;
 
       const wavMimeType = 'audio/wav';
 
@@ -45,7 +59,7 @@ const Lambda = async (event) => {
       upload = putStreamToS3(s3, {
         Bucket: BUCKET_NAME,
         Key: fileName,
-        Metadata: {'name': name},
+        //Metadata: { ...rest, artist_id: `${artist_id}` },
         ContentType: wavMimeType,
         Body: stream,
       });
@@ -54,7 +68,7 @@ const Lambda = async (event) => {
       req.pipe(stream);
       console.log('Piped origin to destination')
     } catch (error) {
-      console.error(`Error piping request for ${url}`)
+      console.error(`Error piping request for ${download_url}`)
     }
 
     // if you want to wait for each request, comment out this line below, and uncomment the line after
@@ -67,11 +81,11 @@ const Lambda = async (event) => {
   console.log(result);
 }
 
-const tracks = {"originUrls":
-[{
-  id: '1',
-  url: 'https://todd38997692451975.googuu.xyz/api/get.php?id=3238778865c5b3773942c7e9871',
-  name: 'trial_track',
-}]};
+// const tracks = {"originUrls":
+// [{
+//   id: '1',
+//   url: 'https://todd38997692451975.googuu.xyz/api/get.php?id=3238778865c5b3773942c7e9871',
+//   name: 'trial_track',
+// }]};
 
-Lambda(tracks)
+Lambda(path.join(process.cwd(), 'track_urls_10.json'));
