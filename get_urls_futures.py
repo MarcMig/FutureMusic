@@ -81,6 +81,9 @@ class FutureScraper:
             browser.find_element_by_xpath('//*[@id="link"]').send_keys(
                 self.song_urls_df["track_url"][i]
             )
+            browser.find_element_by_xpath(
+                '//*[@id="format"]/optgroup[1]/option[8]'
+            ).click()
             sleep(1)
             browser.find_element_by_xpath('//*[@id="load"]').click()
 
@@ -125,22 +128,45 @@ class FutureScraper:
 
         return webdriver.Chrome(options=options)
 
+    def save_json(self, output_filename):
+        df = pd.read_csv(output_filename, usecols=[1, 2, 3, 4, 5])
+        df.to_json(f"{output_filename}.json", orient="index")
+
     def scrape_em(self):
 
         if self.end != "all":
             self.song_urls_df = self.song_urls_df.iloc[
                 self.start : self.end,
             ]
+            print(self.song_urls_df)
+        else:
+            self.end = len(self.song_urls_df)
 
         tic = time()
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"track_urls_{self.start}_to_{self.end}_{timestamp}.csv"
+
+        with open(output_filename, "a") as csvfile:
+            fieldnames = [
+                "id",
+                "track_name",
+                "track_id",
+                "download_url",
+                "artist_name",
+                "artist_id",
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
         futures = []
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
-            for i in range(len(self.song_urls_df)):
+            for i in range(self.start, self.end):
+                print(i)
                 futures.append(executor.submit(self.run_process, i, output_filename))
         wait(futures)
+
+        self.save_json(output_filename)
         toc = time()
         tictoc = toc - tic
         print(f"Elapsed run time: {tictoc} seconds")
@@ -148,6 +174,6 @@ class FutureScraper:
 
 if __name__ == "__main__":
     scraper = FutureScraper(
-        csv_name="only_tracks.csv", end=10, headless=True, threads=1
+        csv_name="only_tracks.csv", start=5, end=10, headless=True, threads=5
     )
     scraper.scrape_em()
