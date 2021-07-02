@@ -88,4 +88,4 @@ const Lambda = async (jsonFileName) => {
 //   name: 'trial_track',
 // }]};
 
-Lambda(path.join(process.cwd(), 'track_urls_10.json'));
+Lambda(path.join(process.cwd(), 'track_urls_0_to_10.json'));

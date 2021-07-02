@@ -109,11 +109,17 @@ class FutureScraper():
         
         return webdriver.Chrome(options=options)
 
+    def save_json(self, output_filename):
+            df = pd.read_csv(output_filename, usecols=[1, 2, 3, 4, 5])
+            df.to_json(f'{output_filename}.json', orient='index')
+
     def scrape_em(self):
     
         if self.end != 'all':
             self.song_urls_df = self.song_urls_df.iloc[self.start:self.end,]
             print(self.song_urls_df)
+        else:
+            self.end = len(self.song_urls_df)
 
         tic = time()
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -127,18 +133,21 @@ class FutureScraper():
         futures = []
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
-            for i in range(len(self.song_urls_df)):
+            for i in range(self.start,self.end):
+                print(i)
                 futures.append(
                     executor.submit(self.run_process, i, output_filename)
                 )
         wait(futures)
+
+        self.save_json(output_filename)
         toc = time()
         tictoc = toc - tic
         print(f"Elapsed run time: {tictoc} seconds")
-        
+
 
 
 if __name__=="__main__":
-    scraper = FutureScraper(csv_name="only_tracks.csv", start=0, end=10, headless=False, threads=5)
+    scraper = FutureScraper(csv_name="only_tracks.csv", start=5, end=10, headless=True, threads=5)
     scraper.scrape_em()
         
