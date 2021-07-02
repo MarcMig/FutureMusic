@@ -78,11 +78,17 @@ class FutureScraper:
 
         if self.connect_to_base(browser, self.url):
             sleep(1)
+<<<<<<< HEAD
             browser.find_element_by_xpath('//*[@id="link"]').send_keys(
                 self.song_urls_df["track_url"][i]
             )
+=======
+            browser.find_element_by_xpath('//*[@id="link"]').send_keys(self.song_urls_df["track_url"][i])
+            browser.find_element_by_xpath('//*[@id="format"]/optgroup[1]/option[8]').click()
+>>>>>>> 3add47360614e6b74750ed7eb57c805bf28eb447
             sleep(1)
             browser.find_element_by_xpath('//*[@id="load"]').click()
+            
 
             try:
                 wait = WebDriverWait(browser, 200)
@@ -126,15 +132,28 @@ class FutureScraper:
         return webdriver.Chrome(options=options)
 
     def scrape_em(self):
+<<<<<<< HEAD
 
         if self.end != "all":
             self.song_urls_df = self.song_urls_df.iloc[
                 self.start : self.end,
             ]
+=======
+    
+        if self.end != 'all':
+            self.song_urls_df = self.song_urls_df.iloc[self.start:self.end,]
+            print(self.song_urls_df)
+>>>>>>> 3add47360614e6b74750ed7eb57c805bf28eb447
 
         tic = time()
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"track_urls_{self.start}_to_{self.end}_{timestamp}.csv"
+        
+        with open(output_filename, "a") as csvfile:
+            fieldnames = ["id", "track_name", "track_id", "download_url", "artist_name", "artist_id"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
         futures = []
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
@@ -146,8 +165,13 @@ class FutureScraper:
         print(f"Elapsed run time: {tictoc} seconds")
 
 
+<<<<<<< HEAD
 if __name__ == "__main__":
     scraper = FutureScraper(
         csv_name="only_tracks.csv", end=10, headless=True, threads=1
     )
+=======
+if __name__=="__main__":
+    scraper = FutureScraper(csv_name="only_tracks.csv", start=0, end=10, headless=False, threads=5)
+>>>>>>> 3add47360614e6b74750ed7eb57c805bf28eb447
     scraper.scrape_em()
