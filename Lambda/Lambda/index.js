@@ -10,8 +10,12 @@ const superagent = require('superagent');
 
 const BUCKET_NAME = 'sound-scraping';
 
-AWS.config.loadFromPath('./config.json');
-AWS.config.update({ region: 'us-east-1' });
+const pathToJson = path.resolve(__dirname, './config.json');
+console.log(pathToJson)
+
+// Load config
+const config = JSON.parse(fs.readFileSync(pathToJson)); 
+AWS.config.update(config);
 
 const s3 = new AWS.S3({
   apiVersion: '2006-03-01',
@@ -33,14 +37,19 @@ const putStreamToS3 = async (s3Service, { Bucket, Key, ContentType, Metadata, Bo
 
 const Lambda = async (jsonFileName) => {
   //const { originUrls } = event;
-  let trax = null;
+  //let trax = null;
 
-  try {
-    trax = JSON.parse(fs.readFileSync(jsonFileName));
-  } catch (e) {
-    console.error(e);
-    return;
-  }
+  const pathToTracks = path.resolve(__dirname, jsonFileName);
+  console.log(pathToTracks)
+  const trax = JSON.parse(fs.readFileSync(pathToTracks));
+
+  // try {
+  //   trax = JSON.parse(fs.readFileSync(pathToTracks));
+  //   console.log(trax)
+  // } catch (e) {
+  //   console.error(e);
+  //   return;
+  // }
 
   const result = await Promise.all(Object.keys(trax).map((key) => {
     const el = trax[key];
@@ -88,4 +97,4 @@ const Lambda = async (jsonFileName) => {
 //   name: 'trial_track',
 // }]};
 
-Lambda(path.join(process.cwd(), 'track_urls_0_to_10.json'));
+Lambda('trackurls.json');

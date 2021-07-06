@@ -172,8 +172,7 @@ class FutureScraper:
         print(f"Elapsed run time: {tictoc} seconds")
 
 
-if __name__ == "__main__":
-    scraper = FutureScraper(
-        csv_name="only_tracks.csv", start=5, end=10, headless=True, threads=5
-    )
+
+if __name__=="__main__":
+    scraper = FutureScraper(csv_name="only_tracks.csv", start=10, end=20, headless=True, threads=5)
     scraper.scrape_em()
