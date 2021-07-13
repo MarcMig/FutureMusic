@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "aws-sdk": "^2.935.0"
+    "aws-sdk": "^2.935.0",
+    "superagent": "file:node_modules/superagent"
   }
 }

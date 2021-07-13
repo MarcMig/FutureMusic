@@ -10,8 +10,8 @@ i = 0
 tempfile = {}
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-filename = __location__ + "\Lambda\Lambda\\trackurls.json"
-js_path = __location__+ "\Lambda\Lambda\\index.js"
+filename = __location__ + "/Lambda/Lambda/trackurls.json"
+js_path = __location__+ "/Lambda/Lambda//index.js"
 print(filename)
 
 for index,item in json_file.items():
@@ -24,4 +24,5 @@ for index,item in json_file.items():
             json.dump(tempfile, outputfile)
             tempfile = {}
         response = execute_js(js_path)
+
 
