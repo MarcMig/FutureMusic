@@ -3,7 +3,7 @@ import os
 from Naked.toolshed.shell import execute_js
 
 
-with open('track_urls_10_to_20_20210705161020.csv.json') as j:
+with open('track_urls_all_v1.csv.json') as j:
     json_file = json.loads(j.read())
 
 i = 0

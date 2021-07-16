@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver.support.expected_conditions import element_to_be_clickable
 from concurrent.futures import ThreadPoolExecutor, wait
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class FutureScraper:
@@ -39,7 +40,7 @@ class FutureScraper:
                 return True
             except Exception as e:
                 print(e)
-                connection_attemps += 10
+                connection_attemps += 1
                 print(f"Error connecting to {url}")
                 print(f"Attempt # {connection_attemps}")
         return False
@@ -60,6 +61,7 @@ class FutureScraper:
             "artist_id": artist_id,
         }
 
+        print(data)
         with open(filename, "a") as csvfile:
             fieldnames = [
                 "id",
@@ -75,7 +77,7 @@ class FutureScraper:
     def run_process(self, i, output_filename):
 
         browser = self.get_driver()
-
+        print(browser)
         if self.connect_to_base(browser, self.url):
             sleep(1)
             browser.find_element_by_xpath('//*[@id="link"]').send_keys(
@@ -118,15 +120,20 @@ class FutureScraper:
                 browser.quit()
 
     def get_driver(self):
+        
 
         options = webdriver.ChromeOptions()
+        print(options)
         options.add_argument("--ignore-certificate-error")
         options.add_argument("--ignore-ssl-errors")
-
+        options.add_argument("--no-sandbox")
+                
         if self.headless:
             options.add_argument("--headless")
 
-        return webdriver.Chrome(options=options)
+        
+        driver = webdriver.Chrome(options=options)
+        return driver
 
     def save_json(self, output_filename):
         df = pd.read_csv(output_filename, usecols=[1, 2, 3, 4, 5])
@@ -144,7 +151,7 @@ class FutureScraper:
 
         tic = time()
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        output_filename = f"track_urls_{self.start}_to_{self.end}_{timestamp}.csv"
+        output_filename = "track_urls_all_v1.csv"
 
         with open(output_filename, "a") as csvfile:
             fieldnames = [
@@ -174,5 +181,5 @@ class FutureScraper:
 
 
 if __name__=="__main__":
-    scraper = FutureScraper(csv_name="only_tracks.csv", start=10, end=20, headless=True, threads=5)
+    scraper = FutureScraper(csv_name="only_tracks.csv", start=0, end='all', headless=True, threads=3)
     scraper.scrape_em()
